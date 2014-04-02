@@ -31,10 +31,14 @@ LightSlab::LightSlab()
 
 LightSlab::LightSlab(string filename)
 {
-	string param = filename + "_parameters";
-	string data = filename + "_data";
+	//string param = filename + "_parameters";
+	//string data = filename + "_data";
 	
+	string param = filename + "_parameters.txt";
+	string data = filename + "_data";
+
 	// First read in parameters
+	
 	FILE* lfparamfile = fopen(param.c_str(), "r");
 	
 	if (lfparamfile == NULL) {
@@ -69,8 +73,26 @@ LightSlab::LightSlab(string filename)
 	
 	// Then grab the data
 	FILE *lfdatafile = fopen(data.c_str(), "rb");
+	if (lfdatafile == NULL) {
+		printf("Could not open file %s", data.c_str()); 
+		return;
+	}
 	fread( this->data, t_res*s_res*v_res*u_res*3, 1, lfdatafile );
 	fclose(lfdatafile);
+
+	int debug =0;
+	if(debug == 1)
+	{
+		CvSize mSize1;
+		mSize1.height = 235;
+		mSize1.width = 314;
+		IplImage* image1 = cvCreateImage(mSize1, 8, 3);
+		memcpy( image1->imageData, this->data, 3*mSize1.height*mSize1.width);
+		cvNamedWindow( "Display Window4", WINDOW_AUTOSIZE);
+		cvShowImage( "Display Window4", image1 );
+		waitKey(0);
+	}
+
 	
 	// Initialize the texture
 	glGenTextures(1, &_texST);
@@ -190,9 +212,14 @@ void LightSlab::sample(float s, float t, float u, float v, unsigned char* trip)
 	int ui = (int) (u_res * u);
 	int vi = (int) (v_res * v);
 	
-	trip[0] = data[ti*3 + si*t_res*3 + vi*t_res*s_res*3 + ui*t_res*s_res*v_res*3];
+	int mytest = ti*3 + si*t_res*3 + vi*t_res*s_res*3 + ui*t_res*s_res*v_res*3;
+	if(mytest > 3*5*5*593*840)
+		mytest = 3*5*5*593*840;
+
+	
+	trip[0] = data[ti*3 + si*t_res*3 + vi*t_res*s_res*3 + ui*t_res*s_res*v_res*3 + 2];
 	trip[1] = data[ti*3 + si*t_res*3 + vi*t_res*s_res*3 + ui*t_res*s_res*v_res*3 + 1];
-	trip[2] = data[ti*3 + si*t_res*3 + vi*t_res*s_res*3 + ui*t_res*s_res*v_res*3 + 2];
+	trip[2] = data[ti*3 + si*t_res*3 + vi*t_res*s_res*3 + ui*t_res*s_res*v_res*3];
 }
 
 void LightSlab::samplef(float s, float t, float u, float v, float* trip)
@@ -203,9 +230,9 @@ void LightSlab::samplef(float s, float t, float u, float v, float* trip)
 	int ui = (int) (u_res * u);
 	int vi = (int) (v_res * v);
 	
-	trip[0] = (data[ti*3 + si*t_res*3 + vi*t_res*s_res*3 + ui*t_res*s_res*v_res*3]) / 255.0;
+	trip[0] = (data[ti*3 + si*t_res*3 + vi*t_res*s_res*3 + ui*t_res*s_res*v_res*3 + 2]) / 255.0;
 	trip[1] = (data[ti*3 + si*t_res*3 + vi*t_res*s_res*3 + ui*t_res*s_res*v_res*3 + 1]) / 255.0;
-	trip[2] = (data[ti*3 + si*t_res*3 + vi*t_res*s_res*3 + ui*t_res*s_res*v_res*3 + 2]) / 255.0;
+	trip[2] = (data[ti*3 + si*t_res*3 + vi*t_res*s_res*3 + ui*t_res*s_res*v_res*3]) / 255.0;
 }
 
 void LightSlab::samplefST(float s, float t, float u, float v, float* trip)
@@ -238,9 +265,9 @@ void LightSlab::samplefST(float s, float t, float u, float v, float* trip)
 	c[2] = ((float) s2 - sf) * ((float) tf - t1) / ((float) (s2-s1) * (t2-t1));
 	c[3] = ((float) sf - s1) * ((float) tf - t1) / ((float) (s2-s1) * (t2-t1));
 	
-	trip[0] += (c[0] * (float) data[samples[0]] + c[1] * (float) data[samples[1]] + c[2] * (float) data[samples[2]] + c[3] * (float) data[samples[3]]) / 255.0;
+	trip[2] += (c[0] * (float) data[samples[0]] + c[1] * (float) data[samples[1]] + c[2] * (float) data[samples[2]] + c[3] * (float) data[samples[3]]) / 255.0;
 	trip[1] += (c[0] * (float) data[samples[0]+1] + c[1] * (float) data[samples[1]+1] + c[2] * (float) data[samples[2]+1] + c[3] * (float) data[samples[3]+1]) / 255.0;
-	trip[2] += (c[0] * (float) data[samples[0]+2] + c[1] * (float) data[samples[1]+2] + c[2] * (float) data[samples[2]+2] + c[3] * (float) data[samples[3]+2]) / 255.0;
+	trip[0] += (c[0] * (float) data[samples[0]+2] + c[1] * (float) data[samples[1]+2] + c[2] * (float) data[samples[2]+2] + c[3] * (float) data[samples[3]+2]) / 255.0;
 }
 
 void LightSlab::samplefUV(float s, float t, float u, float v, float* trip)
@@ -272,9 +299,9 @@ void LightSlab::samplefUV(float s, float t, float u, float v, float* trip)
 	c[2] = ((float) u2 - uf) * ((float) vf - v1) / ((float) (u2-u1) * (v2-v1));
 	c[3] = ((float) uf - u1) * ((float) vf - v1) / ((float) (u2-u1) * (v2-v1));
 	
-	trip[0] += (c[0] * (float) data[samples[0]] + c[1] * (float) data[samples[1]] + c[2] * (float) data[samples[2]] + c[3] * (float) data[samples[3]]) / 255.0;
+	trip[2] += (c[0] * (float) data[samples[0]] + c[1] * (float) data[samples[1]] + c[2] * (float) data[samples[2]] + c[3] * (float) data[samples[3]]) / 255.0;
 	trip[1] += (c[0] * (float) data[samples[0]+1] + c[1] * (float) data[samples[1]+1] + c[2] * (float) data[samples[2]+1] + c[3] * (float) data[samples[3]+1]) / 255.0;
-	trip[2] += (c[0] * (float) data[samples[0]+2] + c[1] * (float) data[samples[1]+2] + c[2] * (float) data[samples[2]+2] + c[3] * (float) data[samples[3]+2]) / 255.0;
+	trip[0] += (c[0] * (float) data[samples[0]+2] + c[1] * (float) data[samples[1]+2] + c[2] * (float) data[samples[2]+2] + c[3] * (float) data[samples[3]+2]) / 255.0;
 }
 
 void LightSlab::samplefUVST(float s, float t, float u, float v, float* trip)
@@ -361,7 +388,7 @@ void LightSlab::samplefUVST(float s, float t, float u, float v, float* trip)
 void LightSlab::sliceUV(float u, float v, unsigned char* slice)
 {
 	int index = 0;
-	for (float s = 0; s < 1.0; s += 1./((float) s_res))
+	for (float s = 0; s < 0.99999; s += 1./((float) s_res))
 	{
 		for (float t = 0; t < 1.0; t += 1./((float) t_res))
 		{
@@ -369,6 +396,7 @@ void LightSlab::sliceUV(float u, float v, unsigned char* slice)
 			index += 3;
 		}
 	}
+	int test = 1;
 }
 
 void LightSlab::sliceST(float s, float t, unsigned char* slice)
@@ -406,8 +434,23 @@ void LightSlab::displaySliceUV(float u, float v)
 	glBindTexture(GL_TEXTURE_2D, _texST);
 	unsigned char* slice = (unsigned char*) malloc(sizeof(unsigned char) * s_res * t_res * 3);
 	this->sliceUV(u,v,slice);
-	glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, s_res, t_res, GL_RGB, GL_UNSIGNED_BYTE, 
-					 slice);
+	
+	int debug = 0;
+	if(debug == 1)
+	{
+		CvSize mSize1;
+		mSize1.height = 235;
+		mSize1.width = 314;
+		IplImage* image1 = cvCreateImage(mSize1, 8, 3);
+		memcpy( image1->imageData, slice, 3*mSize1.height*mSize1.width);
+		cvNamedWindow( "Display Window5", WINDOW_AUTOSIZE);
+		cvShowImage( "Display Window5", image1 );
+		waitKey(0);
+	}
+	//glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	//glPixelStorei(GL_UNPACK_ROW_LENGTH, t_res);
+	glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, s_res, t_res, GL_RGB, GL_UNSIGNED_BYTE,slice);
+
 	//&data[s_res * t_res * 3 * vi + s_res * t_res * v_res * 3 * ui]
 	glBegin (GL_QUADS);
 		glTexCoord2f (0, 0);
